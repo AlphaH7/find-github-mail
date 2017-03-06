@@ -1,0 +1,51 @@
+ #!/usr/bin/env bash
+
+cat github_name.txt | while read USER
+do
+
+
+  if [ "$1" == "-e" ] || [ "$1" == "-g" ] ; then
+    if [ -z "$2" ] ; then
+      echo "$USAGE"
+      exit
+    fi
+
+
+    EVENTRESPONSE=`curl -u alphah9:61170ad931ef7e1db655676e96a84685054f73d4 https://api.github.com/users/$USER/events/public`
+    EMAILS=`echo "$EVENTRESPONSE" | grep "\"email\":" | sed -e's/[,|"]//g' | sort | uniq -c | sort -n | awk '{print $(NF)}' | grep -v null`
+
+    if [ "$1" == "-g" ] ; then
+      PROFILERESPONSE=`curl -u alphah9:61170ad931ef7e1db655676e96a84685054f73d4 https://api.github.com/users/$USER`
+      GID=`echo "$PROFILERESPONSE" | grep "\"gravatar_id\":" | sed -e's/[,|"]//g' | awk '{print $(NF)}'`
+      for EMAIL in $EMAILS ; do
+        if [ $GID == `_md5 $EMAIL` ] ; then
+          echo "$EMAIL" >> output-mails.txt
+        else
+          echo "N/A"
+        fi
+      done
+    else
+      if [ -n "$EMAILS" ] ; then
+        echo "$EMAILS" >> output-mails.txt
+      else
+        echo "N/A" >> output-mails.txt
+      fi
+    fi
+  fi
+
+
+  PROFILERESPONSE=`curl -u alphah9:61170ad931ef7e1db655676e96a84685054f73d4 https://api.github.com/users/$USER`
+  EMAIL=`echo "$PROFILERESPONSE" | grep "\"email\":" | sed -e's/[,|"]//g' | awk '{print $(NF)}' | grep -v null`
+
+  if [ -z "$EMAIL" ] ; then
+    EVENTRESPONSE=`curl -u alphah9:61170ad931ef7e1db655676e96a84685054f73d4 https://api.github.com/users/$USER/events/public`
+    EMAIL=`echo "$EVENTRESPONSE" | grep "\"email\":" | sed -e's/[,|"]//g' | sort | uniq -c | sort -n | awk '{print $(NF)}' | grep -v null | tail -n1`
+  fi
+
+  if [ -n "$EMAIL" ] ; then
+    echo "$EMAIL" >> output-mails.txt
+  else
+    echo "N/A" >> output-mails.txt
+  fi
+
+done
